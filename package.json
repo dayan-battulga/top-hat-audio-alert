@@ -1,6 +1,6 @@
 {
-  "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "name": "Top Hat Audio Alert",
+  "description": "A small chrome extension that makes a sound when there is a tophat question being asked.",
   "private": true,
   "version": "0.1.0",
   "type": "module",
