@@ -11,6 +11,7 @@ export type AlertSound = {
 };
 
 export type AlertSettings = {
+  enabled: boolean;
   volume: number;
   activeSoundId: string;
   sounds: AlertSound[];
@@ -84,6 +85,7 @@ export function createDefaultAlertSettings(): AlertSettings {
   const sounds = getBuiltinSoundCatalog();
 
   return {
+    enabled: true,
     volume: DEFAULT_VOLUME,
     activeSoundId: sounds[0].id,
     sounds,
@@ -126,6 +128,7 @@ export function normalizeAlertSettings(
     : normalizedSounds[0].id;
 
   return {
+    enabled: value.enabled !== false,
     volume: clampVolume(value.volume),
     activeSoundId,
     sounds: normalizedSounds,
@@ -167,6 +170,12 @@ export async function setAlertVolume(volume: number): Promise<AlertSettings> {
   });
 }
 
+export async function setAlertsEnabled(enabled: boolean): Promise<AlertSettings> {
+  return updateAlertSettings((settings) => {
+    settings.enabled = enabled;
+  });
+}
+
 export async function setActiveSound(soundId: string): Promise<AlertSettings> {
   return updateAlertSettings((settings) => {
     const matchingSound = settings.sounds.find((sound) => sound.id === soundId);
@@ -194,6 +203,31 @@ export async function addBuiltinSound(soundId: string): Promise<AlertSettings> {
     }
 
     settings.sounds.push(toBuiltinSound(builtinDefinition));
+  });
+}
+
+export async function restoreBuiltinSounds(): Promise<AlertSettings> {
+  return updateAlertSettings((settings) => {
+    const missingBuiltins = getAvailableBuiltinSounds(settings);
+
+    if (missingBuiltins.length === 0) {
+      return;
+    }
+
+    const remainingSlots = MAX_SOUND_LIBRARY_SIZE - settings.sounds.length;
+
+    if (missingBuiltins.length > remainingSlots) {
+      const soundsToRemove = missingBuiltins.length - remainingSlots;
+      throw new Error(
+        `Remove ${soundsToRemove} ${
+          soundsToRemove === 1 ? 'sound' : 'sounds'
+        } to restore all default alerts.`,
+      );
+    }
+
+    settings.sounds = [...settings.sounds, ...missingBuiltins].sort(
+      (left, right) => left.createdAt - right.createdAt,
+    );
   });
 }
 
@@ -316,6 +350,7 @@ function toBuiltinSound(definition: BuiltinSoundDefinition): AlertSound {
 
 function cloneAlertSettings(settings: AlertSettings): AlertSettings {
   return {
+    enabled: settings.enabled,
     volume: settings.volume,
     activeSoundId: settings.activeSoundId,
     sounds: settings.sounds.map((sound) => ({ ...sound })),

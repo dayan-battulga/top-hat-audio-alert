@@ -61,6 +61,11 @@ async function handleQuestionDetectedMessage(
   }
 
   const settings = await readAlertSettings();
+
+  if (!settings.enabled) {
+    return;
+  }
+
   const activeSound =
     findSoundById(settings, settings.activeSoundId) ?? settings.sounds[0];
 
